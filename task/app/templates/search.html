@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>MetroMetrics</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #1e1e1e;
+            color: white;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            gap: 20px;
+        }
+        .map-section {
+            flex: 1;
+            background: #2d2d2d;
+            border-radius: 10px;
+            padding: 20px;
+            min-height: 600px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        #map {
+            width: 900px;
+            height: 600px;
+            background: #222;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .search-section {
+            width: 300px;
+            background: #2d2d2d;
+            padding: 20px;
+            border-radius: 10px;
+        }
+        .search-form {
+            margin-bottom: 20px;
+        }
+        .search-form input, .search-form select, .search-form button {
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .search-form input, .search-form select {
+            padding: 12px;
+            margin-bottom: 10px;
+            background: #3d3d3d;
+            border: 1px solid #4d4d4d;
+            border-radius: 6px;
+            color: white;
+            font-size: 14px;
+        }
+        .search-form select option {
+            background: #3d3d3d;
+            color: white;
+        }
+        .search-form button {
+            padding: 12px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+        .search-form button:hover {
+            background: #45a049;
+        }
+        .results {
+            background: #3d3d3d;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        .map-section > .results {
+            width: 900px;
+        }
+        .result-item {
+            padding: 15px;
+            border-bottom: 1px solid #4d4d4d;
+        }
+        .result-item:last-child {
+            border-bottom: none;
+        }
+        .result-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .result-text {
+            color: #ddd;
+            font-size: 14px;
+        }
+        .line-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px;
+        }
+        .line-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 70px;
+        }
+        .nav-links a {
+            color: #4CAF50;
+            text-decoration: none;
+            padding:12px;
+            border-radius: 4px;
+            transition: background 0.3s;
+            font-size: 1.2em;
+        }
+        .nav-links a:hover {
+            background: #3d3d3d;
+        }
+        .no-results {
+            text-align: center;
+            padding: 20px;
+            color: #888;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="map-section">
+            <div class="header">
+                <h1>MetroMetrics</h1>
+            </div>
+            <div id="map"></div>
+            {% if last_metrics %}
+            <div class="results" style="margin-top: 30px;">
+                <h2 style="margin-left: 10px; padding-left: 15px;">Last metrics</h2>
+                {% for metric in last_metrics %}
+                <div class="result-item" style="margin-left: 10px;">
+                    <div class="result-title">Train_id: <a href="/search?q={{ metric.train_id }}" style="color: #4CAF50; text-decoration: none">{{ metric.train_id }}</a></div>
+                    <div class="result-text">Station: <a href="/search?q={{ metric.station }}" style="color: #4CAF50; text-decoration: none">{{ metric.station }}</a></div>
+                    <div class="result-text">Speed (km/h): {{ metric.speed }}</div>
+                    <div class="result-text">Position: {{ metric.position }}</div>
+                    <div class="result-text">Timestamp: {{ metric.timestamp }}</div>
+                    <div class="result-text">Meta: 
+                    {% if metric.meta %}
+                        {{ metric.meta }}
+                    {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        <div class="search-section">
+            <div class="nav-links">
+                <h2>Search info</h2>
+                <a href="{{ url_for('index') }}">Restore</a>
+            </div>
+            <form class="search-form" action="{{ url_for('search') }}" method="get">
+                <input type="text" name="q" placeholder="Search trains or stations..." value="{{ q }}">
+                <button type="submit">Search</button>
+            </form>
+
+            {% if results %}
+            <div class="results">
+                {% for result in results %}
+                <div class="result-item">
+                    <div class="result-title">Train_id: <a href="/search?q={{ result.train_id }}" style="color: #4CAF50; text-decoration: none">{{ result.train_id }}</a></div>
+                    <div class="result-text">Station: <a href="/search?q={{ result.station }}" style="color: #4CAF50; text-decoration: none">{{ result.station }}</a></div>
+                    <div class="result-text">Speed (km/h): {{ result.speed }}</div>
+                    <div class="result-text">Position: {{ result.position }}</div>
+                    {% if result.timestamp %}
+                        <div class="result-text">Timestamp: {{ result.timestamp }}</div>
+                    {% endif %}
+                    <div class="result-text">Meta: 
+                    {% if result.meta %}
+                        {{ result.meta }}
+                    {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+                {% if q %}
+                <div class="no-results">
+                    No trains or stations found matching your search.
+                </div>
+                {% endif %}
+            {% endif %}
+        </div>
+    </div>
+    <script src="/static/js/map.js"></script>
+</body>
+</html> 

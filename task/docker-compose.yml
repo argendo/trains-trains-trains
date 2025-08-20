@@ -1,0 +1,57 @@
+services:
+  trains-elasticsearch:
+    container_name: trains-elasticsearch
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
+    environment:
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+      - xpack.security.enabled=false
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+      - ./elasticsearch/init:/docker-entrypoint-initdb.d
+    networks:
+      - trains-net
+
+  trains-web:
+    build: ./app
+    container_name: trains-web
+    environment:
+      - ELASTICSEARCH_HOST=elasticsearch
+      - ELASTICSEARCH_PORT=9200
+    depends_on:
+      - trains-elasticsearch
+    ports:
+      - "5015:5015"
+    networks:
+      - trains-net
+
+  trains-loader:
+    image: curlimages/curl
+    container_name: trains-loader
+    depends_on:
+      - trains-elasticsearch
+    volumes:
+      - ./elasticsearch/init:/init-data
+    entrypoint: >
+      /bin/sh -c "
+        echo '[INFO] Waiting for Elasticsearch...';
+        until curl -s http://trains-elasticsearch:9200/_cluster/health | grep -qE '\"status\":\"(yellow|green)\"'; do sleep 1; done;
+        echo '[OK] Elasticsearch is ready';
+        echo '[INFO] Deleting old index...';
+        curl -s -XDELETE http://trains-elasticsearch:9200/trains > /dev/null;
+
+        echo '[INFO] Waiting for deletion to apply...';
+        while curl -s http://trains-elasticsearch:9200/trains | grep -q '\"error\"'; do sleep 1; done;
+        curl -s -H 'Content-Type: application/x-ndjson' -XPOST 'http://trains-elasticsearch:9200/_bulk' --data-binary @/init-data/bulk_trains.ndjson;
+        echo '[OK] Bulk load complete';
+      "
+    networks:
+      - trains-net
+
+networks:
+  trains-net:
+    name: trains-net
+
+volumes:
+  esdata:
+    name: trains-esdata
